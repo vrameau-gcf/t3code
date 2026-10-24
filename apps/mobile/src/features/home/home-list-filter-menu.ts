@@ -30,6 +30,8 @@ export interface HomeListFilterMenu {
 }
 
 export function buildHomeListFilterMenu(props: {
+  readonly jiraGroupingEnabled?: boolean;
+  readonly onToggleJiraGrouping?: () => void;
   readonly environments: ReadonlyArray<HomeListFilterMenuEnvironment>;
   readonly projects: ReadonlyArray<HomeListFilterMenuProject>;
   readonly selectedEnvironmentId: EnvironmentId | null;
@@ -38,6 +40,14 @@ export function buildHomeListFilterMenu(props: {
   readonly onProjectChange: (projectKey: string | null) => void;
 }): HomeListFilterMenu {
   const items: Array<HomeListFilterMenuAction | HomeListFilterMenuSubmenu> = [];
+
+  if (props.onToggleJiraGrouping)
+    items.push({
+      type: "action",
+      title: "Group by owning Jira tickets",
+      state: props.jiraGroupingEnabled ? "on" : "off",
+      onPress: props.onToggleJiraGrouping,
+    });
 
   items.push({
     type: "submenu",

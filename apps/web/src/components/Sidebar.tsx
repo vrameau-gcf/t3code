@@ -1,3 +1,4 @@
+import { groupThreadsByOwningJiraTickets } from "@t3tools/contracts";
 import { type EnvironmentId, type ScopedProjectRef } from "@t3tools/contracts";
 import type { EnvironmentServerConfig } from "@t3tools/client-runtime/connection";
 import { ThreadContextDragGhost } from "./chat/ThreadContextDragGhost";
@@ -47,7 +48,7 @@ import {
   type ThreadId,
 } from "@t3tools/contracts";
 
-import { FolderIcon, ListFilterIcon, PlusIcon, SettingsIcon } from "lucide-react";
+import { LayersIcon, FolderIcon, ListFilterIcon, PlusIcon, SettingsIcon } from "lucide-react";
 import {
   useEffect,
   useLayoutEffect,
@@ -375,6 +376,11 @@ function useSidebarThreads(input: {
             ),
           ),
         );
+  const [jiraGroupingEnabled, setJiraGroupingEnabled] = useLocalStorage(
+    "t3code:sidebar:jira-grouping",
+    false,
+    Schema.Boolean,
+  );
   const workingShelfEnabled = useClientSettings((s) => s.sidebarWorkingShelfEnabled);
   const nowMinute = useNowMinute();
   // Snooze wake times are second-precise, so classifying with the quantized
@@ -422,8 +428,17 @@ function useSidebarThreads(input: {
   const partitionNextWakeAt = partition.snoozedThreads[0]?.snoozedUntil ?? null;
   if (partitionNextWakeAt !== nextSnoozeWakeAt) setNextSnoozeWakeAt(partitionNextWakeAt);
 
-  const { pinnedThreads, activeThreads, workingThreads, snoozedThreads, settledThreads } =
-    partition;
+  const grouped = (list: readonly EnvironmentThreadShell[]) =>
+    jiraGroupingEnabled
+      ? groupThreadsByOwningJiraTickets(list, (thread) => thread.jiraTickets).flatMap(
+          (group) => group.threads,
+        )
+      : list;
+  const pinnedThreads = grouped(partition.pinnedThreads);
+  const activeThreads = grouped(partition.activeThreads);
+  const workingThreads = grouped(partition.workingThreads);
+  const snoozedThreads = grouped(partition.snoozedThreads);
+  const settledThreads = grouped(partition.settledThreads);
   const visibleSettledThreads = (() => {
     if (settledThreads.length <= settledVisibleCount) return settledThreads;
     const visible = settledThreads.slice(0, settledVisibleCount);
@@ -464,6 +479,13 @@ function useSidebarThreads(input: {
   return {
     routeRowThreadKey,
     ...partition,
+    pinnedThreads,
+    activeThreads,
+    workingThreads,
+    snoozedThreads,
+    settledThreads,
+    jiraGroupingEnabled,
+    toggleJiraGrouping: () => setJiraGroupingEnabled((value) => !value),
     threads,
     workingShelfEnabled,
     searchableThreads: [
@@ -1057,6 +1079,8 @@ export default function Sidebar({ routeReveal }: { routeReveal: SidebarRouteReve
     pinnedKeysById,
     activeKeysById,
     routeRowThreadKey,
+    jiraGroupingEnabled,
+    toggleJiraGrouping,
   } = useSidebarThreads({
     projectScopeKey,
     scopedProjectKeys,
@@ -2637,6 +2661,18 @@ export default function Sidebar({ routeReveal }: { routeReveal: SidebarRouteReve
             <SidebarThreadHeader
               searchFieldRef={headerSearchRef}
               hasProjects={projectGroups.length > 0}
+              groupingControl={
+                <SidebarHeaderIconButton
+                  label="Group by owning Jira tickets"
+                  aria-pressed={jiraGroupingEnabled}
+                  onClick={() => {
+                    cancelThreadDrag();
+                    toggleJiraGrouping();
+                  }}
+                >
+                  <LayersIcon />
+                </SidebarHeaderIconButton>
+              }
               projectScope={
                 <Combobox
                   items={projectScopeItems}
@@ -2899,6 +2935,7 @@ export default function Sidebar({ routeReveal }: { routeReveal: SidebarRouteReve
                             sortableId={threadKey}
                             contextDrag={isContextDrag}
                             sortableDisabled={
+                              jiraGroupingEnabled ||
                               renamingThreadKey === threadKey ||
                               !draggableThreadKeys.has(threadKey) ||
                               optimisticDrop !== null
@@ -3004,9 +3041,30 @@ export default function Sidebar({ routeReveal }: { routeReveal: SidebarRouteReve
                           onDraftContextMenu={handleDraftContextMenu}
                         />,
                       ];
+                      let previousJiraGroup = "";
                       for (const item of sidebarListItems) {
                         if (item.kind === "thread") {
-                          items.push(renderThreadRow(threadByKey.get(item.key)!, item.section));
+                          const thread = threadByKey.get(item.key)!;
+                          if (jiraGroupingEnabled) {
+                            const group = groupThreadsByOwningJiraTickets(
+                              [thread],
+                              (entry) => entry.jiraTickets,
+                            )[0]!;
+                            const groupKey = `${item.section}:${group.key}`;
+                            if (groupKey !== previousJiraGroup) {
+                              items.push(
+                                <li
+                                  key={`jira:${groupKey}`}
+                                  data-thread-selection-safe
+                                  className="list-none px-2.5 pt-3 pb-1 text-xs font-medium text-sidebar-muted-foreground"
+                                >
+                                  <h3>{group.label}</h3>
+                                </li>,
+                              );
+                              previousJiraGroup = groupKey;
+                            }
+                          }
+                          items.push(renderThreadRow(thread, item.section));
                           continue;
                         }
                         switch (item.marker) {

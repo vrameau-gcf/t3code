@@ -523,6 +523,7 @@ export const ThreadListV2PendingRow = memo(function ThreadListV2PendingRow(props
 });
 
 export const ThreadListV2Row = memo(function ThreadListV2Row(props: {
+  readonly jiraGroupLabel?: string;
   readonly thread: EnvironmentThreadShell;
   readonly variant: "card" | "slim";
   readonly hasQueuedMessages?: boolean;
@@ -1349,11 +1350,25 @@ export const ThreadListV2Row = memo(function ThreadListV2Row(props: {
       </RowPressable>
     );
 
+  const jiraHeader = props.jiraGroupLabel ? (
+    <Text
+      accessibilityRole="header"
+      className="px-4 pt-3 pb-1 text-xs font-semibold text-foreground-muted"
+    >
+      {props.jiraGroupLabel}
+    </Text>
+  ) : null;
   if (!canOperateThread)
-    return <View style={rowAppearance.swipeContainerStyle}>{rowContent(() => {})}</View>;
+    return (
+      <View>
+        {jiraHeader}
+        <View style={rowAppearance.swipeContainerStyle}>{rowContent(() => {})}</View>
+      </View>
+    );
 
   return (
     <View collapsable={false}>
+      {jiraHeader}
       {customSnoozeOpen && (
         <CustomSnoozeSheet onClose={() => setCustomSnoozeOpen(false)} onSnooze={handleSnooze} />
       )}

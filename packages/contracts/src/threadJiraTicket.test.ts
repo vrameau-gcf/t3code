@@ -3,6 +3,7 @@ import * as Schema from "effect/Schema";
 
 import {
   ThreadJiraTicket,
+  groupThreadsByOwningJiraTickets,
   parseJiraTicketReference,
   applyThreadJiraTicketChange,
 } from "./threadJiraTicket.ts";
@@ -68,4 +69,33 @@ describe("thread Jira tickets", () => {
     ]);
     expect(applyThreadJiraTicketChange(moved, { action: "unlink", key: "APP-99" })).toEqual(moved);
   });
+});
+
+it("groups by the complete owning set, ignoring order, duplicates and related tickets", () => {
+  const owner = (key: string) => ({ key, relationship: "work_item" as const });
+  const threads = [
+    { id: "pair", jiraTickets: [owner("APP-2"), owner("APP-1")] },
+    { id: "single", jiraTickets: [owner("APP-1")] },
+    {
+      id: "same-pair",
+      jiraTickets: [
+        owner("APP-1"),
+        owner("APP-2"),
+        owner("APP-1"),
+        { key: "APP-9", relationship: "related" as const },
+      ],
+    },
+    { id: "related-only", jiraTickets: [{ key: "APP-1", relationship: "related" as const }] },
+    { id: "empty", jiraTickets: [] },
+  ];
+  const groups = groupThreadsByOwningJiraTickets(threads, (thread) => thread.jiraTickets);
+  expect(
+    groups.map((group) => ({ label: group.label, ids: group.threads.map((thread) => thread.id) })),
+  ).toEqual([
+    { label: "APP-1 + APP-2", ids: ["pair", "same-pair"] },
+    { label: "APP-1", ids: ["single"] },
+    { label: "No owning Jira tickets", ids: ["related-only", "empty"] },
+  ]);
+  expect(threads[0]!.jiraTickets.map((ticket) => ticket.key)).toEqual(["APP-2", "APP-1"]);
+  expect(groupThreadsByOwningJiraTickets([], () => undefined)).toEqual([]);
 });

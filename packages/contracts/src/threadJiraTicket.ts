@@ -78,3 +78,39 @@ export function applyThreadJiraTicketChange(
     ? tickets.map((entry) => (entry.key === key ? ticket : entry))
     : [...tickets, ticket];
 }
+
+export function groupThreadsByOwningJiraTickets<T>(
+  threads: ReadonlyArray<T>,
+  ticketsOf: (thread: T) => ReadonlyArray<ThreadJiraTicket> | undefined,
+): Array<{ key: string; label: string; threads: T[] }> {
+  const groups = new Map<string, { key: string; label: string; threads: T[] }>();
+  for (const thread of threads) {
+    const keys = [
+      ...new Set(
+        (ticketsOf(thread) ?? [])
+          .filter((ticket) => ticket.relationship === "work_item")
+          .map((ticket) => ticket.key),
+      ),
+    ].sort();
+    const key = JSON.stringify(keys);
+    let group = groups.get(key);
+    if (!group) {
+      group = { key, label: keys.join(" + ") || "No owning Jira tickets", threads: [] };
+      groups.set(key, group);
+    }
+    group.threads.push(thread);
+  }
+  return [...groups.values()].sort((left, right) =>
+    left.key === right.key
+      ? 0
+      : left.key === "[]"
+        ? 1
+        : right.key === "[]"
+          ? -1
+          : left.key < right.key
+            ? -1
+            : left.key > right.key
+              ? 1
+              : 0,
+  );
+}

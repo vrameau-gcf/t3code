@@ -270,6 +270,8 @@ function ThreadNavigationSidebarPane(
     settledShelfExpanded,
     snoozedShelfExpanded,
     workingShelfEnabled,
+    jiraGroupingEnabled,
+    toggleJiraGrouping,
     workingShelfExpanded,
     toggleSettledShelf,
     toggleSnoozedShelf,
@@ -377,6 +379,7 @@ function ThreadNavigationSidebarPane(
           pendingTask.title.toLocaleLowerCase().includes(v2SearchQuery)),
     );
     const items: SidebarListItem[] = buildThreadListV2ListItems({
+      jiraGroupingEnabled,
       items: threadListV2Layout.items,
       pendingTasks: v2PendingTasks,
       workingCount: threadListV2Layout.workingCount,
@@ -404,6 +407,11 @@ function ThreadNavigationSidebarPane(
     return items;
   })();
   const listMenuActions = [
+    {
+      id: "jira-grouping",
+      title: "Group by owning Jira tickets",
+      state: jiraGroupingEnabled ? ("on" as const) : ("off" as const),
+    },
     {
       id: "environment",
       title: "Environment",
@@ -452,6 +460,10 @@ function ThreadNavigationSidebarPane(
     readonly nativeEvent: { readonly event: string };
   }) => {
     const event = nativeEvent.event;
+    if (event === "jira-grouping") {
+      toggleJiraGrouping();
+      return;
+    }
     if (event === "environment:all") {
       setSelectedEnvironmentId(null);
       return;
@@ -611,6 +623,7 @@ function ThreadNavigationSidebarPane(
           <ThreadListV2Row
             onNewThreadOnBranch={props.onNewThreadOnBranch}
             thread={thread}
+            jiraGroupLabel={item.jiraGroupLabel}
             variant={item.item.variant}
             hasQueuedMessages={item.hasQueuedMessages}
             snoozed={item.item.snoozed}
@@ -725,6 +738,8 @@ function ThreadNavigationSidebarPane(
     selectedProjectKey,
     onEnvironmentChange: setSelectedEnvironmentId,
     onProjectChange: setSelectedProjectKey,
+    jiraGroupingEnabled,
+    onToggleJiraGrouping: toggleJiraGrouping,
   });
   const nativeHeaderItems = createSidebarHeaderItems({
     filterIcon,

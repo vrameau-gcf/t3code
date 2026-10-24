@@ -1,3 +1,4 @@
+import { groupThreadsByOwningJiraTickets } from "@t3tools/contracts";
 import { threadPullRequestSearchTerms } from "@t3tools/shared/threadPullRequests";
 import {
   canSnooze,
@@ -282,6 +283,7 @@ export interface ThreadListV2Layout {
 }
 
 export interface ThreadListV2ThreadListItem {
+  readonly jiraGroupLabel?: string;
   readonly type: "v2-thread";
   readonly key: string;
   readonly item: ThreadListV2Item;
@@ -375,6 +377,7 @@ export function threadListV2ListItemsAreEqual(
         previous.item.pinned === item.item.pinned &&
         previous.item.wokeAt === item.item.wokeAt &&
         previous.snoozeWakeLabelText === item.snoozeWakeLabelText &&
+        previous.jiraGroupLabel === item.jiraGroupLabel &&
         previous.timeLabel === item.timeLabel &&
         previous.snoozePresetMinute === item.snoozePresetMinute &&
         previous.showTrailingDivider === item.showTrailingDivider &&
@@ -451,6 +454,7 @@ export function buildThreadListV2ListItems(input: {
   readonly queuedThreadKeys?: ReadonlySet<string>;
   readonly moveAvailability?: ReadonlyMap<string, ThreadMoveAvailability>;
   readonly shelfPreferencesLoading?: boolean;
+  readonly jiraGroupingEnabled?: boolean;
 }): ThreadListV2ListItem[] {
   const queuedThreadKeys = input.queuedThreadKeys?.size ? input.queuedThreadKeys : undefined;
   const threadItems = input.items.map((item): ThreadListV2ListItem => {
@@ -534,11 +538,42 @@ export function buildThreadListV2ListItems(input: {
     });
     result.push(...threadItems.slice(settledShelfHeaderIndex));
   }
-  return result.map((entry, index) => {
+  const displayItems: ThreadListV2ListItem[] = [];
+  let run: ThreadListV2ThreadListItem[] = [];
+  const flush = () => {
+    if (input.jiraGroupingEnabled) {
+      for (const group of groupThreadsByOwningJiraTickets(
+        run,
+        (entry) => entry.item.thread.jiraTickets,
+      )) {
+        displayItems.push(
+          ...group.threads.map((entry, index) => ({
+            ...entry,
+            jiraGroupLabel: index === 0 ? group.label : undefined,
+            canMoveUp: false,
+            canMoveDown: false,
+          })),
+        );
+      }
+    } else displayItems.push(...run);
+    run = [];
+  };
+  for (const entry of result) {
+    if (entry.type === "v2-thread") {
+      if (run.length > 0 && run[0]!.item.pinned !== entry.item.pinned) flush();
+      run.push(entry);
+    } else {
+      flush();
+      displayItems.push(entry);
+    }
+  }
+  flush();
+  return displayItems.map((entry, index) => {
     if (entry.type !== "v2-thread" && entry.type !== "v2-pending") return entry;
-    const next = result[index + 1];
+    const next = displayItems[index + 1];
     const showTrailingDivider =
-      next?.type === "v2-thread" || (next?.type === "v2-pending" && !next.showPendingDivider);
+      (next?.type === "v2-thread" && !next.jiraGroupLabel) ||
+      (next?.type === "v2-pending" && !next.showPendingDivider);
     return showTrailingDivider === entry.showTrailingDivider
       ? entry
       : { ...entry, showTrailingDivider };

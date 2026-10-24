@@ -11,6 +11,16 @@ export function useThreadListV2ShelfPreferences() {
     loaded && preferencesResult.value.threadListSnoozedShelfExpanded === true;
   const settledShelfExpanded =
     loaded && preferencesResult.value.threadListSettledShelfExpanded === true;
+  const jiraGroupingEnabled =
+    loaded && preferencesResult.value.threadListJiraGroupingEnabled === true;
+  const toggleJiraGrouping = () => {
+    if (!loaded) return;
+    savePreferences({
+      transform: (current) => ({
+        threadListJiraGroupingEnabled: current.threadListJiraGroupingEnabled !== true,
+      }),
+    });
+  };
   const workingShelfEnabled = loaded && preferencesResult.value.workingShelfEnabled === true;
   const workingShelfExpanded =
     loaded && preferencesResult.value.threadListWorkingShelfExpanded === true;
@@ -44,6 +54,8 @@ export function useThreadListV2ShelfPreferences() {
 
   return {
     loaded,
+    jiraGroupingEnabled,
+    toggleJiraGrouping,
     settledShelfExpanded,
     snoozedShelfExpanded,
     workingShelfEnabled,

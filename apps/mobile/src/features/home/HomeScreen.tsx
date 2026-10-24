@@ -447,6 +447,7 @@ export function HomeScreen(props: HomeScreenProps) {
     settledShelfExpanded,
     snoozedShelfExpanded,
     workingShelfEnabled,
+    jiraGroupingEnabled,
     workingShelfExpanded,
     toggleSettledShelf,
     toggleSnoozedShelf,
@@ -552,6 +553,7 @@ export function HomeScreen(props: HomeScreenProps) {
       (v2SearchQuery.length === 0 || pendingTask.title.toLocaleLowerCase().includes(v2SearchQuery)),
   );
   const threadListV2Items = buildThreadListV2ListItems({
+    jiraGroupingEnabled,
     items: threadListV2Layout.items,
     pendingTasks: v2PendingTasks,
     workingCount: threadListV2Layout.workingCount,
@@ -650,6 +652,7 @@ export function HomeScreen(props: HomeScreenProps) {
         fullSwipeWidth={fullSwipeWidth}
         onNewThreadOnBranch={props.onNewThreadOnBranch}
         thread={thread}
+        jiraGroupLabel={item.jiraGroupLabel}
         variant={item.item.variant}
         hasQueuedMessages={item.hasQueuedMessages}
         snoozed={item.item.snoozed}

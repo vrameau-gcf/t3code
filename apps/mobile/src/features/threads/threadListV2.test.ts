@@ -1573,3 +1573,63 @@ describe("Working section beta", () => {
     ]);
   });
 });
+
+it("groups exact owning Jira sets within shelves and restores normal ordering when disabled", () => {
+  const owner = (key: string) => ({ key, relationship: "work_item" as const });
+  const threads = [
+    makeThread({
+      id: ThreadId.make("jira-pinned"),
+      title: "Pinned",
+      pinnedAt: NOW,
+      jiraTickets: [owner("APP-1")],
+    }),
+    makeThread({
+      id: ThreadId.make("jira-pair-a"),
+      title: "Pair A",
+      jiraTickets: [owner("APP-2"), owner("APP-1")],
+    }),
+    makeThread({
+      id: ThreadId.make("jira-single"),
+      title: "Single",
+      jiraTickets: [owner("APP-1")],
+    }),
+    makeThread({
+      id: ThreadId.make("jira-pair-b"),
+      title: "Pair B",
+      jiraTickets: [owner("APP-1"), owner("APP-2")],
+    }),
+    makeThread({
+      id: ThreadId.make("jira-related"),
+      title: "Related",
+      jiraTickets: [{ key: "APP-1", relationship: "related" }],
+    }),
+  ];
+  const layout = buildThreadListV2Items({
+    threads,
+    environmentId: null,
+    searchQuery: "",
+    now: NOW,
+  });
+  const input = { items: layout.items, pendingTasks: [] };
+  const original = buildThreadListV2ListItems(input);
+  const grouped = buildThreadListV2ListItems({ ...input, jiraGroupingEnabled: true });
+  const rows = grouped.filter((entry) => entry.type === "v2-thread");
+  expect(rows.map((entry) => entry.item.thread.id)).toEqual([
+    "jira-pinned",
+    "jira-pair-a",
+    "jira-pair-b",
+    "jira-single",
+    "jira-related",
+  ]);
+  expect(rows.map((entry) => entry.jiraGroupLabel)).toEqual([
+    "APP-1",
+    "APP-1 + APP-2",
+    undefined,
+    "APP-1",
+    "No owning Jira tickets",
+  ]);
+  expect(rows.every((entry) => !entry.canMoveUp && !entry.canMoveDown)).toBe(true);
+  expect(rows[2]?.showTrailingDivider).toBe(false);
+  expect(buildThreadListV2ListItems({ ...input, jiraGroupingEnabled: false })).toEqual(original);
+  expect(threadListV2ListItemsAreEqual(original[0]!, grouped[0]!)).toBe(false);
+});

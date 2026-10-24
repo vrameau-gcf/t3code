@@ -250,6 +250,17 @@ function BetaSettingsSection() {
 
   return (
     <View className="gap-3">
+      <SettingsSection title="Jira tickets">
+        <SettingsSwitchRow
+          icon="folder"
+          label="Group by owning Jira tickets"
+          value={
+            AsyncResult.isSuccess(preferences) &&
+            preferences.value.threadListJiraGroupingEnabled === true
+          }
+          onValueChange={(value) => savePreferences({ threadListJiraGroupingEnabled: value })}
+        />
+      </SettingsSection>
       <SettingsSection title="Beta">
         <SettingsSwitchRow
           icon="bolt.circle"
