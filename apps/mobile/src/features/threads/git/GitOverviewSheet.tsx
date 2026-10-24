@@ -1,3 +1,4 @@
+import { ThreadJiraTickets } from "../ThreadJiraTickets";
 import * as Dialog from "../../../components/ui/Dialog";
 import { SheetHeader } from "../../../components/ui/SheetHeader";
 import { useOpenPullRequest } from "../../../native/useOpenPullRequest";
@@ -325,6 +326,13 @@ function GitOverviewSheetContent(props: GitOverviewSheetProps) {
             />
           ))}
         </ListSection>
+      ) : null}
+
+      {selectedThread ? (
+        <ThreadJiraTickets
+          key={`${selectedThread.environmentId}:${selectedThread.id}`}
+          threadRef={{ environmentId: selectedThread.environmentId, threadId: selectedThread.id }}
+        />
       ) : null}
 
       {currentWorktreePath ? (

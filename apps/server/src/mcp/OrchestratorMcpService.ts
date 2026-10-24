@@ -874,6 +874,7 @@ function listItemFromShell(
     interactionMode: shell.interactionMode,
     linkedPullRequest: shell.linkedPullRequest ?? null,
     pullRequests: threadPullRequests(shell.pullRequests),
+    ...(shell.jiraTickets === undefined ? {} : { jiraTickets: shell.jiraTickets }),
     ...threadSettlement(shell),
     ...threadSnooze(shell, nowMs),
     parentThreadId: shell.lineage.parentThreadId,
@@ -907,6 +908,9 @@ function threadDetail(
     interactionMode: projection.thread.interactionMode,
     linkedPullRequest: projection.thread.linkedPullRequest ?? null,
     pullRequests: threadPullRequests(projection.thread.pullRequests),
+    ...(projection.thread.jiraTickets === undefined
+      ? {}
+      : { jiraTickets: projection.thread.jiraTickets }),
     titleRegeneration:
       projection.thread.titleRegeneration === undefined ||
       projection.thread.titleRegeneration === null

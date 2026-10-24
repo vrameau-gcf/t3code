@@ -1,3 +1,4 @@
+import { applyThreadJiraTicketChange } from "@t3tools/contracts";
 import type {
   OrchestrationV2SearchThreadInput,
   OrchestrationV2SearchThreadResult,
@@ -3188,6 +3189,14 @@ const makeOrchestrator = Effect.fn("orchestrationV2.Orchestrator.layer")(functio
           return {
             ...thread,
             ...(command.title === undefined ? {} : { title: command.title }),
+            ...(command.jiraTicketChange === undefined
+              ? {}
+              : {
+                  jiraTickets: applyThreadJiraTicketChange(
+                    thread.jiraTickets ?? [],
+                    command.jiraTicketChange,
+                  ),
+                }),
             ...(command.limitRecovery === undefined ? {} : { limitRecovery }),
             ...(command.limitRecovery !== undefined &&
             limitRecovery?.snooze === true &&

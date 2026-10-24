@@ -236,3 +236,9 @@ several selected threads together. Choose **Wake thread** to bring a thread back
 A snoozed thread keeps working and stays hidden until its wake time, even while
 its agent wakes itself for background work. It comes back early only when it needs
 an approval or answer from you, when a run fails, or when you send it a message.
+
+## Link Jira tickets
+
+Open thread details to link Jira keys (such as `APP-123`) or Jira browse URLs. On mobile, open the thread’s Git controls to find Jira tickets. Each thread can have multiple **Work items** for tickets it implements and **Related tickets** for context. A mention in a conversation does not make a ticket a work item. Use Move to change the relationship or Unlink to remove it. Links are stored in T3 Code; Jira authentication is not required and linking does not change the Jira issue. Ticket keys identify links within a thread.
+
+Agents can use `t3_thread_update` with `action: "link_jira_ticket"` and `jiraTicket: { key: "APP-123", relationship: "work_item" }` (or `"related"`). Use `action: "unlink_jira_ticket"` with `jiraTicketKey` to remove a link. Thread reads and lists include `jiraTickets`.

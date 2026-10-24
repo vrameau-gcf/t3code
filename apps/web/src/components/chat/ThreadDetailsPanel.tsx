@@ -1,3 +1,4 @@
+import { ThreadJiraTicketsPanel } from "./ThreadJiraTicketsPanel";
 import type {
   EditorId,
   EnvironmentId,
@@ -180,6 +181,13 @@ export function ThreadDetailsPanel(props: ThreadDetailsPanelProps) {
                 ) : null}
               </div>
             </ThreadDetailsSection>
+          ) : null}
+
+          {props.isServerThread && !props.draftId ? (
+            <ThreadJiraTicketsPanel
+              key={`${props.environmentId}:${props.threadId}`}
+              threadRef={activeThreadRef}
+            />
           ) : null}
 
           {density === "full" && !props.draftId ? (

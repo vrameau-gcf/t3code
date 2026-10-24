@@ -1231,3 +1231,70 @@ it.effect("explicit settle clears snooze atomically and stays idempotent after r
     assert.deepInclude((yield* projections.getThreadProjection(threadId)).thread, active);
   }).pipe(Effect.provide(layerTest)),
 );
+
+it.effect("persists multiple Jira work items separately from related tickets", () =>
+  Effect.gen(function* () {
+    const orchestrator = yield* Orchestrator.OrchestratorV2;
+    const projections = yield* ProjectionStore.ProjectionStoreV2;
+    const threadId = ThreadId.make("thread:jira-links");
+    yield* orchestrator.dispatch({
+      type: "thread.create",
+      commandId: CommandId.make("jira-create"),
+      threadId,
+      projectId: ProjectId.make("project:jira"),
+      title: "Jira links",
+      modelSelection,
+      runtimeMode: "full-access",
+      interactionMode: "default",
+      branch: null,
+      worktreePath: null,
+      createdBy: "user",
+      creationSource: "web",
+    });
+    for (const key of ["APP-1", "APP-2"]) {
+      yield* orchestrator.dispatch({
+        type: "thread.metadata.update",
+        commandId: CommandId.make(`jira-link-${key}`),
+        threadId,
+        jiraTicketChange: { action: "link", ticket: { key, relationship: "work_item" } },
+      });
+    }
+    const related = {
+      type: "thread.metadata.update" as const,
+      commandId: CommandId.make("jira-related"),
+      threadId,
+      jiraTicketChange: {
+        action: "link" as const,
+        ticket: { key: "APP-3", relationship: "related" as const },
+      },
+    };
+    yield* orchestrator.dispatch(related);
+    yield* orchestrator.dispatch(related);
+    const tickets = (yield* projections.getThreadProjection(threadId)).thread.jiraTickets;
+    assert.deepEqual(tickets, [
+      { key: "APP-1", relationship: "work_item" },
+      { key: "APP-2", relationship: "work_item" },
+      { key: "APP-3", relationship: "related" },
+    ]);
+    assert.deepEqual((yield* projections.getThreadShell(threadId))?.jiraTickets, tickets);
+    yield* orchestrator.dispatch({
+      type: "thread.metadata.update",
+      commandId: CommandId.make("jira-move"),
+      threadId,
+      jiraTicketChange: { action: "link", ticket: { key: "APP-3", relationship: "work_item" } },
+    });
+    yield* orchestrator.dispatch({
+      type: "thread.metadata.update",
+      commandId: CommandId.make("jira-unlink"),
+      threadId,
+      jiraTicketChange: { action: "unlink", key: "APP-1" },
+    });
+    assert.deepEqual((yield* projections.getThreadShell(threadId))?.jiraTickets, [
+      { key: "APP-2", relationship: "work_item" },
+      { key: "APP-3", relationship: "work_item" },
+    ]);
+    const projection = yield* projections.getThreadProjection(threadId);
+    assert.equal(projection.thread.title, "Jira links");
+    assert.deepEqual(projection.thread.pullRequests, []);
+  }).pipe(Effect.provide(layerTest)),
+);

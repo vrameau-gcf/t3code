@@ -74,6 +74,20 @@ function metadataCommand(input: {
   readonly update: ThreadMetadataMcpUpdateInput;
 }): Extract<OrchestrationV2Command, { readonly type: "thread.metadata.update" }> {
   switch (input.update.action) {
+    case "link_jira_ticket":
+      return {
+        type: "thread.metadata.update",
+        commandId: input.commandId,
+        threadId: input.threadId,
+        jiraTicketChange: { action: "link", ticket: input.update.jiraTicket! },
+      };
+    case "unlink_jira_ticket":
+      return {
+        type: "thread.metadata.update",
+        commandId: input.commandId,
+        threadId: input.threadId,
+        jiraTicketChange: { action: "unlink", key: input.update.jiraTicketKey! },
+      };
     case "rename":
       return {
         type: "thread.metadata.update",
@@ -114,7 +128,7 @@ function resultFromThread(input: {
   readonly sequence: number;
   readonly thread: Pick<
     OrchestrationV2AppThread,
-    "id" | "title" | "titleRegeneration" | "linkedPullRequest" | "updatedAt"
+    "id" | "title" | "titleRegeneration" | "linkedPullRequest" | "jiraTickets" | "updatedAt"
   >;
 }): ThreadMetadataMcpUpdateResult {
   return {
@@ -131,6 +145,7 @@ function resultFromThread(input: {
             startedAt: DateTime.formatIso(input.thread.titleRegeneration.startedAt),
           },
     linkedPullRequest: input.thread.linkedPullRequest ?? null,
+    ...(input.thread.jiraTickets === undefined ? {} : { jiraTickets: input.thread.jiraTickets }),
     updatedAt: DateTime.formatIso(input.thread.updatedAt),
   };
 }

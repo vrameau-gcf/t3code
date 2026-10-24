@@ -1,3 +1,4 @@
+import { ThreadJiraTicket, JiraTicketKey } from "./threadJiraTicket.ts";
 import * as Schema from "effect/Schema";
 
 import {
@@ -63,9 +64,11 @@ export const ThreadMetadataMcpAction = Schema.Literals([
   "regenerate_title",
   "link_pull_request",
   "unlink_pull_request",
+  "link_jira_ticket",
+  "unlink_jira_ticket",
 ]).annotate({
   description:
-    "Metadata mutation: rename, regenerate_title, link_pull_request, or unlink_pull_request.",
+    "Metadata mutation: rename, regenerate_title, link_pull_request, unlink_pull_request, link_jira_ticket, or unlink_jira_ticket. Jira relationships must be explicit: work_item for tickets this thread implements; related for context.",
 });
 export type ThreadMetadataMcpAction = typeof ThreadMetadataMcpAction.Type;
 
@@ -87,9 +90,29 @@ export const ThreadMetadataMcpUpdateInput = Schema.Struct({
   pullRequest: Schema.optional(ThreadMetadataMcpPullRequest).annotate({
     description: "Pull request to link. Required only when action is link_pull_request.",
   }),
+  jiraTicket: Schema.optional(ThreadJiraTicket),
+  jiraTicketKey: Schema.optional(JiraTicketKey),
   clientRequestId: Schema.optional(ThreadMetadataClientRequestId),
 }).check(
   Schema.makeFilter((input) => {
+    if (input.action === "link_jira_ticket") {
+      return input.jiraTicket !== undefined &&
+        input.jiraTicketKey === undefined &&
+        input.title === undefined &&
+        input.pullRequest === undefined
+        ? true
+        : "link_jira_ticket requires jiraTicket only.";
+    }
+    if (input.action === "unlink_jira_ticket") {
+      return input.jiraTicketKey !== undefined &&
+        input.jiraTicket === undefined &&
+        input.title === undefined &&
+        input.pullRequest === undefined
+        ? true
+        : "unlink_jira_ticket requires jiraTicketKey only.";
+    }
+    if (input.jiraTicket !== undefined || input.jiraTicketKey !== undefined)
+      return "Jira fields require a Jira action.";
     switch (input.action) {
       case "rename":
         return input.title !== undefined && input.pullRequest === undefined
@@ -117,6 +140,7 @@ export const ThreadMetadataMcpUpdateResult = Schema.Struct({
   title: Schema.String,
   titleRegeneration: Schema.NullOr(ThreadTitleRegeneration),
   linkedPullRequest: Schema.NullOr(ThreadLinkedPullRequest),
+  jiraTickets: Schema.optional(Schema.Array(ThreadJiraTicket)),
   updatedAt: IsoDateTime,
 });
 export type ThreadMetadataMcpUpdateResult = typeof ThreadMetadataMcpUpdateResult.Type;

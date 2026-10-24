@@ -1581,6 +1581,9 @@ export function threadShellFromProjection(
     branch: projection.thread.branch,
     worktreePath: projection.thread.worktreePath,
     pullRequests: threadPullRequestsOf(projection.thread),
+    ...(projection.thread.jiraTickets === undefined
+      ? {}
+      : { jiraTickets: projection.thread.jiraTickets }),
     ...(projection.thread.linkedPullRequest === undefined
       ? {}
       : { linkedPullRequest: projection.thread.linkedPullRequest }),
@@ -1840,6 +1843,9 @@ function shellFromState(input: {
     branch: input.state.thread.branch,
     worktreePath: input.state.thread.worktreePath,
     pullRequests: threadPullRequestsOf(input.state.thread),
+    ...(input.state.thread.jiraTickets === undefined
+      ? {}
+      : { jiraTickets: input.state.thread.jiraTickets }),
     ...(input.state.thread.linkedPullRequest === undefined
       ? {}
       : { linkedPullRequest: input.state.thread.linkedPullRequest }),

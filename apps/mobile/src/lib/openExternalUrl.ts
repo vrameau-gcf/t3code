@@ -5,6 +5,7 @@ const ExternalUrlTarget = Schema.Literals([
   "file-preview",
   "markdown-link",
   "pull-request",
+  "jira-ticket",
   "provider-auth",
   "html-render",
   "mcp-app",

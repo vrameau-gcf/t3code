@@ -47,3 +47,28 @@ describe("ThreadMetadataMcpUpdateInput", () => {
     }
   });
 });
+
+it("requires explicit Jira relationships and keeps Jira actions separate from other metadata", () => {
+  assert.deepEqual(
+    decodeUpdate({
+      action: "link_jira_ticket",
+      jiraTicket: { key: "APP-1", relationship: "work_item" },
+    }).jiraTicket,
+    { key: "APP-1", relationship: "work_item" },
+  );
+  assert.equal(
+    decodeUpdate({ action: "unlink_jira_ticket", jiraTicketKey: "APP-1" }).jiraTicketKey,
+    "APP-1",
+  );
+  for (const input of [
+    { action: "link_jira_ticket", jiraTicket: { key: "APP-1" } },
+    {
+      action: "link_jira_ticket",
+      jiraTicket: { key: "APP-1", relationship: "related" },
+      title: "Title",
+    },
+    { action: "unlink_jira_ticket" },
+    { action: "rename", title: "Title", jiraTicketKey: "APP-1" },
+  ])
+    assert.throws(() => decodeUpdate(input));
+});
